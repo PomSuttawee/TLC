@@ -4,20 +4,37 @@ import matplotlib.pyplot as plt
 import image_processing
 
 class Mixture:
+    """
+    Initialize the Mixture object.
+
+    Parameters:
+    - image: The input image for the mixture.
+    """
     def __init__(self, image):
         self.image = image
-        self.preprocessed_image = image_processing.preprocessing_mixture(image)
-        if self.preprocessed_image.shape[0] > self.preprocessed_image.shape[1]:
-            self.preprocessed_image = cv2.rotate(self.preprocessed_image, cv2.ROTATE_90_CLOCKWISE)
+        self.preprocessed_image = self._preprocess_image(image)
         self.intensity = {}
         self.peak_area = {}
         
         self._calculate_intensity()
         minima = self._calculate_minima()
-        new_minima = [(minima[i] + minima[i+1]) // 2 for i in range(1, len(minima)-1, 2)]
-        new_minima.insert(0, 0)
-        new_minima.insert(len(new_minima), self.image.shape[1]-1)
+        new_minima = self._refine_minima(minima)
         self._calculate_peak_area(new_minima)
+
+    def _preprocess_image(self, image):
+        """
+        Preprocess the image for analysis.
+        
+        Parameters:
+        - image: The input image for preprocessing.
+
+        Returns:
+        - preprocessed_image: The preprocessed image.
+        """
+        preprocessed_image = image_processing.preprocessing_mixture(image)
+        if preprocessed_image.shape[0] > preprocessed_image.shape[1]:
+            preprocessed_image = cv2.rotate(preprocessed_image, cv2.ROTATE_90_CLOCKWISE)
+        return preprocessed_image
 
     def _calculate_intensity(self):
         """
@@ -43,15 +60,33 @@ class Mixture:
         minima_index = np.sort(np.concatenate((zero_to_non_zero, non_zero_to_zero)))
         return minima_index
 
+    def _refine_minima(self, minima):
+        """
+        Refine the minima points to determine accurate peak boundaries.
+
+        Parameters:
+        - minima: Initial minima points.
+
+        Returns:
+        - new_minima: Refined minima points.
+        """
+        new_minima = [(minima[i] + minima[i + 1]) // 2 for i in range(1, len(minima) - 1, 2)]
+        new_minima.insert(0, 0)
+        new_minima.append(self.image.shape[1] - 1)
+        return new_minima
+
     def _calculate_peak_area(self, minima):
         """
         Calculate the area under the intensity curve for each peak and color channel.
+
+        Parameters:
+        - minima: Minima points for peak boundaries.
         """
         peak_area = {}
         for color in 'RGB':
             each_color_area = []
             intensity = self.intensity[color]
             for index_minima in range(0, len(minima)-1, 1):
-                each_color_area.append(np.trapz(intensity[minima[index_minima]: minima[index_minima+1]+1]))
+                each_color_area.append(np.trapz(intensity[minima[index_minima]: minima[index_minima + 1] + 1]))
             peak_area[color] = np.array(each_color_area)
         self.peak_area = peak_area
