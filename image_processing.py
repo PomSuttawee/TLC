@@ -33,27 +33,18 @@ def preprocessing_mixture(image: np.ndarray) -> np.ndarray:
     image_remove_background = __apply_mask(image_original, threshold_mask, 'and')
     return image_remove_background
 
-def preprocessing_calibration(image: np.ndarray, remove_background: bool=False) -> list:
+def preprocessing_calibration(image: np.ndarray) -> list:
     image_original = image.copy()
     image = __to_gray_scale(image)
     image = __apply_gaussian_blur(image)
     image = __apply_clahe(image)
     image = __apply_adaptive_thresholding(image)
     threshold_mask = __apply_morph(image)
-    if remove_background:
-        image_remove_background = __apply_mask(image_original, threshold_mask, 'and')
-        list_contour = __get_contour(threshold_mask, min_area=400)
-        list_box_horizontal = __get_bounding_box_horizontal(list_contour, image_original.shape[1])
-        list_cropped_by_box_horizontal = __crop_by_bounding_box(image_remove_background, list_box_horizontal)
-        # list_box_vertical = __get_bounding_box_vertical(list_contour, image_original.shape[0])
-        # list_cropped_by_box_vertical = __crop_by_bounding_box(image_remove_background, list_box_vertical)
-    else:
-        list_contour = __get_contour(threshold_mask, min_area=400)
-        list_box_horizontal = __get_bounding_box_horizontal(list_contour, image_original.shape[1])
-        list_cropped_by_box_horizontal = __crop_by_bounding_box(image_original, list_box_horizontal)
-        # list_box_vertical = __get_bounding_box_vertical(list_contour, image_original.shape[0])
-        # list_cropped_by_box_vertical = __crop_by_bounding_box(image_remove_background, list_box_vertical)
-    return list_cropped_by_box_horizontal#, list_cropped_by_box_vertical
+    image_remove_background = __apply_mask(image_original, threshold_mask, 'and')
+    list_contour = __get_contour(threshold_mask, min_area=400)
+    list_box_horizontal = __get_bounding_box_horizontal(list_contour, image_original.shape[1])
+    list_cropped_by_box_horizontal = __crop_by_bounding_box(image_remove_background, list_box_horizontal)
+    return list_cropped_by_box_horizontal
 
 def draw_contour(image: np.ndarray, list_contour: list) -> np.ndarray:
     index = -1
