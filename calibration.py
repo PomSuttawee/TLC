@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import image_processing
-import ui_1
 
 class PeakInfo:
     def __init__(self):
@@ -22,8 +21,8 @@ class Calibration:
         - concentration: List of concentrations corresponding to the peaks.
         """
         self.image = image
-        self.preprocessed_image = image_processing.preprocessing_calibration(image)
-        self.peaks = [PeakInfo() for _ in range(len(self.preprocessed_image))]
+        self.processed_image = image_processing.preprocessing_calibration(image)
+        self.peaks = [PeakInfo() for _ in range(len(self.processed_image))]
         self.plot = {}
         
         self._calculate_intensity()
@@ -49,7 +48,7 @@ class Calibration:
         """
         Calculate the intensity for each color channel in the preprocessed images.
         """
-        for i, image in enumerate(self.preprocessed_image):
+        for i, image in enumerate(self.processed_image):
             intensity = {}
             image_rgb = cv2.split(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
             for j, color in enumerate(['R', 'G', 'B']):
