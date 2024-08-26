@@ -3,7 +3,6 @@ import numpy as np
 import cv2
 
 def read_image(image_path: str) -> np.ndarray:
-    print(f"Reading image from: {image_path}")
     image = cv2.imread(image_path)
     if image is None:
         raise FileNotFoundError(f"Image not found at {image_path}")
