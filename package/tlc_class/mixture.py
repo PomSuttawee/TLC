@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-from package.mixhack import image_processing
+from package.image_processing import image_processing
 
 class Mixture:
     """

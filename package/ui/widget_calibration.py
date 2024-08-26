@@ -10,8 +10,8 @@ from PySide6.QtWidgets import QWidget, QListWidget, QVBoxLayout, QHBoxLayout, QL
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 
-from package.mixhack.image_processing import read_image
-from package.mixhack.calibration import Calibration
+from package.image_processing.image_processing import read_image
+from package.tlc_class.calibration import Calibration
 
 class WidgetCalibration(QWidget):
     data_sent = Signal(list)
@@ -72,8 +72,12 @@ class WidgetCalibration(QWidget):
         self.label_image_peak = QLabel()
         self.label_image_peak.setAlignment(Qt.AlignTop)
         
-        v_layout_middle.addWidget(self.label_image_original)
-        v_layout_middle.addWidget(self.label_image_peak)
+        ## Peak Information Label
+        self.label_peak_info = QLabel()
+        
+        v_layout_middle.addWidget(self.label_image_original, 1)
+        v_layout_middle.addWidget(self.label_image_peak, 1)
+        v_layout_middle.addWidget(self.label_peak_info, 1)
         
         # Right Vertical Box
         self.v_layout_right = QVBoxLayout()
@@ -140,10 +144,10 @@ class WidgetCalibration(QWidget):
         self.canvas_best_fit_line = FigureCanvasQTAgg(plot)
         self.v_layout_right.addWidget(self.canvas_best_fit_line)
         
-        # info_peak_area = self.dict_calibration_object[path].peaks[peak_index].peak_area
-        # info_best_fit_line = self.dict_calibration_object[path].peaks[peak_index].best_fit_line
-        # calibration_info = f"{path}\nPeak {peak_index+1}\nPeak Area:\n\tR: {info_peak_area['R']}\n\tG: {info_peak_area['G']}\n\tB: {info_peak_area['B']}\nBest Fit Line:\n\tR: {info_best_fit_line['R']}\n\tG: {info_best_fit_line['G']}\n\tB: {info_best_fit_line['B']}"
-        # self.label_calibration_info.setText(calibration_info)
+        info_peak_area = self.dict_calibration_object[path].peaks[peak_index].peak_area
+        info_best_fit_line = self.dict_calibration_object[path].peaks[peak_index].best_fit_line
+        calibration_info = f"Calibration: {path.split('/')[-1]}\nPeak: {peak_index+1}\nPeak Area:\n\tR: {info_peak_area['R']}\n\tG: {info_peak_area['G']}\n\tB: {info_peak_area['B']}\nBest Fit Line:\n\tR: {info_best_fit_line['R']}\n\tG: {info_best_fit_line['G']}\n\tB: {info_best_fit_line['B']}"
+        self.label_peak_info.setText(calibration_info)
 
     def _convert_cv2_to_qpixmap(self, cv_image):
         rgb_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)

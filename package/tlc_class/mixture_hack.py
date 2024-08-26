@@ -1,8 +1,8 @@
-import package.mixhack.mixture as mt
-import package.mixhack.calibration as cb
+from package.tlc_class.mixture import Mixture
+from package.tlc_class.calibration import Calibration
 import sympy as sp
 
-def calculate_concentration(mixture: mt.Mixture, calibration: list):
+def calculate_concentration(mixture: Mixture, calibration: list[Calibration]):
     # Define symbolic variables
     log = ""
     variables = [sp.symbols(f'c{i+1}') for i in range(len(calibration))]

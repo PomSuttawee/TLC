@@ -6,12 +6,12 @@ matplotlib.use('Qt5Agg')
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QWidget, QListWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog, QLineEdit, QTreeWidget, QTreeWidgetItem, QAbstractItemView
+from PySide6.QtWidgets import QWidget, QListWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog, QTreeWidget, QTreeWidgetItem, QAbstractItemView
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 
-from package.mixhack.image_processing import read_image
-from package.mixhack.mixture import Mixture
+from package.image_processing.image_processing import read_image
+from package.tlc_class.mixture import Mixture
 
 class WidgetMixture(QWidget):
     def __init__(self):

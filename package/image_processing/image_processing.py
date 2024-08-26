@@ -1,4 +1,4 @@
-from package.mixhack.util import *
+from package.image_processing.util import *
 import numpy as np
 import cv2
 
