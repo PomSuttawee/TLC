@@ -94,6 +94,7 @@ class WidgetMixture(QWidget):
         
     def on_signal_from_calibration(self, list_calibration_object):
         self.list_calibration_object = list_calibration_object
+        self.tree_widget_calibration_object.clear()
         
         items = []
         for i, calibration_object in enumerate(self.list_calibration_object):
