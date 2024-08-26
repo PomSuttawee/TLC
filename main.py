@@ -1,8 +1,9 @@
-import tkinter as tk
-
-import ui_1
-import ui_2
+from PySide6.QtWidgets import QApplication
+from package.ui.main_widget import MainWidget
+import sys
 
 if __name__ == "__main__":
-    # ui_1.GUI()
-    ui_2.Main_GUI()
+    app = QApplication(sys.argv)
+    window = MainWidget()
+    window.show()
+    app.exec()

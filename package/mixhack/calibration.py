@@ -1,18 +1,21 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-import image_processing
+from package.mixhack import image_processing
 
 class PeakInfo:
-    def __init__(self):
+    def __init__(self, image):
+        self.image = image
         self.intensity = {}
         self.minima = []
         self.peak_area = {}
-        self.concentration = []
         self.best_fit_line = {}
-        
+        self.r2 = {}
+        self.plot_intensity = {}
+        self.plot_best_fit_line = {}
+    
 class Calibration:
-    def __init__(self, image):
+    def __init__(self, image, concentration):
         """
         Initialize the Calibration object.
 
@@ -21,42 +24,52 @@ class Calibration:
         - concentration: List of concentrations corresponding to the peaks.
         """
         self.image = image
-        self.processed_image = image_processing.preprocessing_calibration(image)
-        self.peaks = [PeakInfo() for _ in range(len(self.processed_image))]
+        self.concentration = concentration
+        processed_image = image_processing.preprocessing_calibration(image, remove_background=True)
+        self.peaks = [PeakInfo(image) for image in processed_image]
         self.plot = {}
         
         self._calculate_intensity()
-        print('\n\n### Intensity')
-        for i, peak in enumerate(self.peaks):
-            print(f'\tPeak {i+1}: {peak.intensity}')
-        
         self._calculate_minima()
-        print('\n### Minima')
-        for i, peak in enumerate(self.peaks):
-            print(f'\tPeak {i+1}: {peak.minima}')
-        # refined_best_minima = self._refine_minima(best_minima)
-        
         self._calculate_peak_area()
-        print('\n### Peak Area')
-        for i, peak in enumerate(self.peaks):
-            print(f'\tPeak {i+1}:')
-            for color in 'RGB':
-                print(f'\t\t{color}: {peak.peak_area[color]}')
+        self._calculate_fit_line()
+        self._plot_intensity()
+        self._plot_best_fit_line()
         
+        # print('\n\n### Intensity')
+        # for i, peak in enumerate(self.peaks):
+        #     print(f'\tPeak {i+1}: {peak.intensity}')
+        
+        # print('\n### Minima')
+        # for i, peak in enumerate(self.peaks):
+        #     print(f'\tPeak {i+1}: {peak.minima}')
+        # # refined_best_minima = self._refine_minima(best_minima)
+        
+        # print('\n### Peak Area')
+        # for i, peak in enumerate(self.peaks):
+        #     print(f'\tPeak {i+1}:')
+        #     for color in 'RGB':
+        #         print(f'\t\t{color}: {peak.peak_area[color]}')
 
+        # print('\n### Best Fit Line')
+        # for i, peak in enumerate(self.peaks):
+        #     print(f'\tPeak {i+1}:')
+        #     for color in 'RGB':
+        #         print(f'\t\t{color}: {peak.best_fit_line[color]}')
+        
     def _calculate_intensity(self):
         """
         Calculate the intensity for each color channel in the preprocessed images.
         """
-        for i, image in enumerate(self.processed_image):
+        for peak in self.peaks:
             intensity = {}
-            image_rgb = cv2.split(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+            image_rgb = cv2.split(cv2.cvtColor(peak.image, cv2.COLOR_BGR2RGB))
             for j, color in enumerate(['R', 'G', 'B']):
                 total_intensity = np.sum(image_rgb[j], axis=0)
                 count_color_pixel = np.sum(np.where(image_rgb[j] > 0, 1, 0), axis=0)
                 average_intensity = np.where(count_color_pixel > 0, (255 - (total_intensity / count_color_pixel)).astype(int), 0)
                 intensity[color] = average_intensity
-            self.peaks[i].intensity = intensity
+            peak.intensity = intensity
 
     def _calculate_minima(self):
         """
@@ -100,24 +113,32 @@ class Calibration:
                 peak_area[color] = np.array(each_color_area)
             peak.peak_area = peak_area
     
-    def calculate_fit_line(self):
+    def _calculate_fit_line(self):
         """
         Calculate the best fit line for the peak areas vs. concentrations.
         """
         for peak in self.peaks:
             best_fit_line = {}
+            r2 = {}
             for color in 'RGB':
-                best_fit_line[color] = tuple(np.polyfit(peak.concentration, peak.peak_area[color], 1).astype(int))
+                # Calculate fite line
+                concentration = self.concentration[-len(peak.peak_area[color]):]
+                best_fit_line[color] = tuple(np.polyfit(concentration, peak.peak_area[color], 1).astype(int))
+                
+                # Calculate R2
+                actual = np.array(peak.peak_area[color])
+                coef, const = best_fit_line[color]
+                predict = np.array([coef*cont + const for cont in concentration])
+                mean = np.mean(actual)
+                
+                ssr = sum(np.power(actual-predict, 2))
+                sst = sum(np.power(actual-mean, 2))
+                r2[color] = 1 - ssr/sst
+                
             peak.best_fit_line = best_fit_line
-        
-        print('\n### Best Fit Line')
-        for i, peak in enumerate(self.peaks):
-            print(f'\tPeak {i+1}:')
-            for color in 'RGB':
-                print(f'\t\t{color}: {peak.best_fit_line[color]}')
+            peak.r2 = r2
 
-    def plot_intensity(self):
-        intensity_plot = {}
+    def _plot_intensity(self):
         x = np.arange(0, len(self.peaks[0].intensity['R']))
         for j, peak in enumerate(self.peaks):
             figure, axis = plt.subplots(nrows=3, ncols=1, figsize=(5, 12))
@@ -125,33 +146,36 @@ class Calibration:
             for i, color in enumerate(['R', 'G', 'B']):
                 intensity = peak.intensity[color]
                 axis[i].plot(x, intensity, color=rgb[i])
-                axis[i].scatter(self.best_minima, np.take(intensity, self.best_minima))
-                axis[i].set_title(f'Peak {j}: {rgb[i]} Intensity')
+                axis[i].scatter(peak.minima, np.take(intensity, peak.minima))
+                axis[i].set_title(f'Peak {j+1}: {rgb[i]} Intensity')
                 axis[i].set_xlabel('Pixel')
                 axis[i].set_ylabel('Intensity')
                 axis[i].set_ylim((0, 255))
                 axis[i].grid()
             figure.tight_layout()
-            intensity_plot[peak] = figure
-        self.plot['Intensity'] = intensity_plot
+            peak.plot_intensity = figure
+            plt.close()
+
     
-    def plot_peak_area(self):
-        peak_area_plot = {}
+    def _plot_best_fit_line(self):
+        max_peak_area_count = max([len(peak.peak_area['R']) for peak in self.peaks])
         for j, peak in enumerate(self.peaks):
-            figure, axis = plt.subplots(nrows=3, ncols=1, figsize=(5, 12))
+            figure, axis = plt.subplots(nrows=3, ncols=1, figsize=(4, 12))
             rgb = ['Red', 'Green', 'Blue']
             for i, color in enumerate(['R', 'G', 'B']):
                 peak_area = peak.peak_area[color]
+                while len(peak_area) < max_peak_area_count:
+                    peak_area = np.insert(peak_area, 0, 0, axis=0)
                 a, b = peak.best_fit_line[color]
                 x = np.linspace(self.concentration[0], self.concentration[-1], 100)
                 y = a*x + b
+                r2 = round(peak.r2[color], 3)
                 axis[i].scatter(self.concentration, peak_area, color=rgb[i])
-                axis[i].plot(x, y, color=rgb[i], label=f'{a}x + {b}') 
-                axis[i].set_title(f'Peak {j}: {rgb[i]} Peak Area')
+                axis[i].plot(x, y, color=rgb[i], label=f'{a}c + {b}\nR2: {r2}') 
+                axis[i].set_title(f'Peak {j+1}: {rgb[i]} Peak Area')
                 axis[i].set_xlabel('Concentration')
                 axis[i].set_ylabel('Peak Area')
-                axis[i].grid()
                 axis[i].legend()
             figure.tight_layout()
-            peak_area_plot[peak] = figure
-        self.plot['Peak_area'] = peak_area_plot
+            peak.plot_best_fit_line = figure
+            plt.close()

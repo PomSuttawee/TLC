@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-import image_processing
+from package.mixhack import image_processing
 
 class Mixture:
     """
@@ -12,7 +12,7 @@ class Mixture:
     """
     def __init__(self, image):
         self.image = image
-        self.preprocessed_image = self._preprocess_image(image)
+        self.processed_image = self._preprocess_image(image)
         self.intensity = {}
         self.peak_area = {}
         
@@ -32,8 +32,6 @@ class Mixture:
         - preprocessed_image: The preprocessed image.
         """
         preprocessed_image = image_processing.preprocessing_mixture(image)
-        if preprocessed_image.shape[0] > preprocessed_image.shape[1]:
-            preprocessed_image = cv2.rotate(preprocessed_image, cv2.ROTATE_90_CLOCKWISE)
         return preprocessed_image
 
     def _calculate_intensity(self):
@@ -41,7 +39,7 @@ class Mixture:
         Calculate the intensity for each color channel in the preprocessed images.
         """
         intensity = {}
-        image_rgb = cv2.split(cv2.cvtColor(self.preprocessed_image, cv2.COLOR_BGR2RGB))
+        image_rgb = cv2.split(cv2.cvtColor(self.processed_image, cv2.COLOR_BGR2RGB))
         for i, color in enumerate(['R', 'G', 'B']):
             total_intensity = np.sum(image_rgb[i], axis=0)
             count_color_pixel = np.sum(np.where(image_rgb[i] > 0, 1, 0), axis=0)

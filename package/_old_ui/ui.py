@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, filedialog
 
 from PIL import Image, ImageTk
 import cv2
@@ -14,7 +14,7 @@ class GUI:
     def __init__(self) -> None:
         self.root = tk.Tk()
         self.root.title('Mixture Hack')
-        self.root.geometry('1400x1024')
+        self.root.geometry('1600x900')
 
         self.tk_images = []
         self.upload_image_frames = []
@@ -37,6 +37,12 @@ class GUI:
         ## Upload Button
         self.upload_button = tk.Button(self.upload_frame, text='Upload', command=self.upload_image)
         self.upload_button.pack(side=tk.TOP, pady=10)
+        ## Concentration Entry
+        self.concentration_label = tk.Label(self.upload_frame, text='Concentration (Seperate by /)', font=('Arial', 10))
+        self.concentration_label.pack(side=tk.TOP)
+        self.concentration_input = tk.Entry(self.upload_frame, width=40)
+        self.concentration_input.insert(0, '5.00/8.33/16.67/33.33/50.00/66.67/83.33/100.00')
+        self.concentration_input.pack(side=tk.TOP)
         ## Get Result Button
         self.result_button = tk.Button(self.upload_frame, text='Get Result!', command=self.get_result)
         self.result_button.pack(side=tk.BOTTOM, pady=10)
@@ -140,20 +146,14 @@ class GUI:
     def get_result(self):
         self.clear_result_frame()
         self.calibration_obj = []
+        concentration = [float(x) for x in self.concentration_input.get().split('/')]
         for data in self.image_data:
             image = data['file']
             image_type = data['combobox'].get()
             if image_type == "Mixture":
                 self.mixture_obj = mixture.Mixture(image)
             elif image_type == "Calibration":
-                calib = calibration.Calibration(image)
-                for i, peak in enumerate(calib.peaks):
-                    concentration = self.get_concentration(calib.preprocessed_image[i]).split(' ')
-                    concentration = [float(x) for x in concentration]
-                    peak.concentration = concentration
-                calib.calculate_fit_line()
-                self.calibration_obj.append(calib)
-
+                self.calibration_obj.append(calibration.Calibration(image, concentration))
         mixture_hack.calculate_concentration(self.mixture_obj, self.calibration_obj)
 
         self.display_result()
@@ -191,8 +191,8 @@ class GUI:
                 peak_area_text = "Peak Area:"
                 best_fit_line_text = "\nBest Fit Line:"
                 for color in 'RGB':
-                    peak_area_text += f"\n        {color}: {calib_obj.peaks[j].peak_area[color]}"
-                    best_fit_line_text += f"\n        {color}: {calib_obj.peaks[j].best_fit_line[color]}"
+                    peak_area_text += f'\n        {color}: {calib_obj.peak_info[f'Peak {j+1}']['Peak_area'][color]}'
+                    best_fit_line_text += f'\n        {color}: {calib_obj.peak_info[f'Peak {j+1}']['Best_fit_line'][color]}'
 
                 info_text = peak_area_text + best_fit_line_text
                 peak_info = tk.Label(peak_frame, text=info_text, justify=tk.LEFT)
@@ -214,32 +214,3 @@ class GUI:
         image = image.resize(size=(int(image.size[0]*scale), int(image.size[1]*scale)))
         image = ImageTk.PhotoImage(image)
         return image
-
-    def get_concentration(self, image):
-        self.concentration_var = tk.StringVar()
-
-        popup = tk.Toplevel(self.root)
-        popup.title("Pop-up with Image and Input")
-
-        # Load the image
-        photo = self.cv2_to_tk(resize_image(image, 0.4))
-
-        # Create a label to display the image
-        image_label = tk.Label(popup, image=photo)
-        image_label.image = photo  # Keep a reference to avoid garbage collection
-        image_label.pack(side=tk.TOP, pady=10)
-
-        # Create a label for the input prompt
-        prompt_label = tk.Label(popup, text="Concentration:")
-        prompt_label.pack(side=tk.TOP, pady=10)
-
-        # Create an entry widget for input
-        entry = tk.Entry(popup, width=50, textvariable=self.concentration_var)
-        entry.pack(side=tk.TOP, pady=10)
-
-        # Create a button to submit the input
-        submit_button = tk.Button(popup, text="Submit", command=popup.destroy)
-        submit_button.pack(side=tk.TOP, pady=10)
-
-        popup.wait_window(popup)  # Wait for the popup window to be closed
-        return self.concentration_var.get()  # Return the value of the StringVar
