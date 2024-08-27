@@ -24,7 +24,7 @@ def select_area_from_image(image: np.ndarray) -> np.ndarray:
 
 def preprocessing_mixture(image: np.ndarray) -> np.ndarray:
     image_original = image.copy()
-    image = __to_gray_scale(image)
+    image = __to_grayscale(image)
     image = __apply_gaussian_blur(image)
     image = __apply_clahe(image)
     image = __apply_adaptive_thresholding(image, mode='Mixture')
@@ -32,38 +32,28 @@ def preprocessing_mixture(image: np.ndarray) -> np.ndarray:
     image_remove_background = __apply_mask(image_original, threshold_mask, 'and')
     return image_remove_background
 
-def preprocessing_calibration(image: np.ndarray, remove_background: bool=False) -> list:
+def preprocessing_calibration(image: np.ndarray) -> list[np.ndarray]:
     image_original = image.copy()
-    image = __to_gray_scale(image)
+    image = __to_grayscale(image)
     image = __apply_gaussian_blur(image)
     image = __apply_clahe(image)
     image = __apply_adaptive_thresholding(image)
     threshold_mask = __apply_morph(image)
-    if remove_background:
-        image_remove_background = __apply_mask(image_original, threshold_mask, 'and')
-        list_contour = __get_contour(threshold_mask, min_area=400)
-        list_box_horizontal = __get_bounding_box_horizontal(list_contour, image_original.shape[1])
-        list_cropped_by_box_horizontal = __crop_by_bounding_box(image_remove_background, list_box_horizontal)
-        # list_box_vertical = __get_bounding_box_vertical(list_contour, image_original.shape[0])
-        # list_cropped_by_box_vertical = __crop_by_bounding_box(image_remove_background, list_box_vertical)
-    else:
-        list_contour = __get_contour(threshold_mask, min_area=400)
-        list_box_horizontal = __get_bounding_box_horizontal(list_contour, image_original.shape[1])
-        list_cropped_by_box_horizontal = __crop_by_bounding_box(image_original, list_box_horizontal)
-        # list_box_vertical = __get_bounding_box_vertical(list_contour, image_original.shape[0])
-        # list_cropped_by_box_vertical = __crop_by_bounding_box(image_remove_background, list_box_vertical)
-    return list_cropped_by_box_horizontal#, list_cropped_by_box_vertical
+    image_remove_background = __apply_mask(image_original, threshold_mask, 'and')
+    list_contour = __get_contour(threshold_mask, min_area=400)
+    list_box_horizontal = __get_bounding_box_horizontal(list_contour, image_original.shape[1])
+    list_cropped_by_box_horizontal = __crop_by_bounding_box(image_remove_background, list_box_horizontal)
+    image_with_contour_and_bounding_box = draw_contour(image_original, list_contour)
+    image_with_contour_and_bounding_box = draw_bounding_box(image_with_contour_and_bounding_box, list_box_horizontal)
+    return list_cropped_by_box_horizontal, image_with_contour_and_bounding_box
 
 def draw_contour(image: np.ndarray, list_contour: list) -> np.ndarray:
     index = -1
     color = (0, 255, 0)
-    thickness = 2
+    thickness = 8
     line_type = cv2.LINE_AA
     new_image = image.copy()
     cv2.drawContours(new_image, list_contour, index, color, thickness, line_type)
-    cv2.imshow('Contour', new_image)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
     return new_image
 
 def draw_bounding_box(image: np.ndarray, list_box: list) -> np.ndarray:
@@ -73,14 +63,11 @@ def draw_bounding_box(image: np.ndarray, list_box: list) -> np.ndarray:
         top_left_point = (x, y)
         bottom_right_point = (x+w, y+h)
         color = (0, 0, 255)
-        thickness = 3
+        thickness = 8
         new_image = cv2.rectangle(new_image, top_left_point, bottom_right_point, color, thickness)
-    cv2.imshow('Contour', new_image)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-    return
+    return new_image
 
-def __to_gray_scale(image_rgb: np.ndarray) -> np.ndarray:
+def __to_grayscale(image_rgb: np.ndarray) -> np.ndarray:
     return cv2.cvtColor(image_rgb, cv2.COLOR_BGR2GRAY)
 
 def __apply_gaussian_blur(image: np.ndarray) -> np.ndarray:
