@@ -68,6 +68,10 @@ class WidgetCalibration(QWidget):
         self.label_image_original = QLabel()
         self.label_image_original.setAlignment(Qt.AlignTop)
         
+        ## Processed Image
+        self.label_image_processed = QLabel()
+        self.label_image_processed .setAlignment(Qt.AlignTop)
+
         ## Peak Image
         self.label_image_peak = QLabel()
         self.label_image_peak.setAlignment(Qt.AlignTop)
@@ -76,6 +80,7 @@ class WidgetCalibration(QWidget):
         self.label_peak_info = QLabel()
         
         v_layout_middle.addWidget(self.label_image_original, 1)
+        v_layout_middle.addWidget(self.label_image_processed, 1)
         v_layout_middle.addWidget(self.label_image_peak, 1)
         v_layout_middle.addWidget(self.label_peak_info, 1)
         
@@ -86,8 +91,8 @@ class WidgetCalibration(QWidget):
         self.canvas_best_fit_line = FigureCanvasQTAgg(Figure(figsize=(4, 12)))
         
         main_layout.addLayout(v_layout_left, 1)
-        main_layout.addLayout(v_layout_middle, 1)
-        main_layout.addLayout(self.v_layout_right, 1)
+        main_layout.addLayout(v_layout_middle, 2)
+        main_layout.addLayout(self.v_layout_right, 2)
         self.setLayout(main_layout)
 
     def upload_image(self):
@@ -135,6 +140,9 @@ class WidgetCalibration(QWidget):
         pix = self._convert_cv2_to_qpixmap(self.dict_calibration_object[path].image)
         self.label_image_original.setPixmap(pix)
 
+        pix = self._convert_cv2_to_qpixmap(self.dict_calibration_object[path].processed_image_result)
+        self.label_image_processed.setPixmap(pix)
+
         pix = self._convert_cv2_to_qpixmap(self.dict_calibration_object[path].peaks[peak_index].image)
         self.label_image_peak.setPixmap(pix)
         
@@ -153,4 +161,4 @@ class WidgetCalibration(QWidget):
         rgb_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
         PIL_image = Image.fromarray(rgb_image).convert('RGB')
         pix = QPixmap.fromImage(ImageQt(PIL_image))
-        return pix.scaledToWidth(500)
+        return pix.scaledToWidth(600)
