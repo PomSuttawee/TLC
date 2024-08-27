@@ -6,11 +6,8 @@ from package.image_processing import image_processing
 class Mixture:
     """
     Initialize the Mixture object.
-
-    Parameters:
-    - image: The input image for the mixture.
     """
-    def __init__(self, image):
+    def __init__(self, image: np.ndarray):
         self.image = image
         self.processed_image = self._preprocess_image(image)
         self.intensity = {}
@@ -24,12 +21,6 @@ class Mixture:
     def _preprocess_image(self, image):
         """
         Preprocess the image for analysis.
-        
-        Parameters:
-        - image: The input image for preprocessing.
-
-        Returns:
-        - preprocessed_image: The preprocessed image.
         """
         preprocessed_image = image_processing.preprocessing_mixture(image)
         return preprocessed_image
@@ -61,12 +52,6 @@ class Mixture:
     def _refine_minima(self, minima):
         """
         Refine the minima points to determine accurate peak boundaries.
-
-        Parameters:
-        - minima: Initial minima points.
-
-        Returns:
-        - new_minima: Refined minima points.
         """
         new_minima = [(minima[i] + minima[i + 1]) // 2 for i in range(1, len(minima) - 1, 2)]
         new_minima.insert(0, 0)
@@ -76,9 +61,6 @@ class Mixture:
     def _calculate_peak_area(self, minima):
         """
         Calculate the area under the intensity curve for each peak and color channel.
-
-        Parameters:
-        - minima: Minima points for peak boundaries.
         """
         peak_area = {}
         for color in 'RGB':
