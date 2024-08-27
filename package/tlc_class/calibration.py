@@ -11,11 +11,11 @@ class PeakInfo:
         self.peak_area = {}
         self.best_fit_line = {}
         self.r2 = {}
-        self.plot_intensity = {}
-        self.plot_best_fit_line = {}
+        self.plot_intensity = None
+        self.plot_best_fit_line = None
     
 class Calibration:
-    def __init__(self, image, concentration):
+    def __init__(self, image: np.ndarray, concentration: list[float]):
         """
         Initialize the Calibration object.
         """
@@ -23,7 +23,6 @@ class Calibration:
         self.concentration = concentration
         processed_image_by_peak, self.processed_image_result = image_processing.preprocessing_calibration(image)
         self.peaks = [PeakInfo(image) for image in processed_image_by_peak]
-        self.plot = {}
         
         self._calculate_intensity()
         self._calculate_minima()
@@ -129,7 +128,7 @@ class Calibration:
     def _plot_best_fit_line(self):
         max_peak_area_count = max([len(peak.peak_area['R']) for peak in self.peaks])
         for j, peak in enumerate(self.peaks):
-            figure, axis = plt.subplots(nrows=3, ncols=1, figsize=(4, 12))
+            figure, axis = plt.subplots(nrows=3, ncols=1, figsize=(3, 9))
             rgb = ['Red', 'Green', 'Blue']
             for i, color in enumerate(['R', 'G', 'B']):
                 peak_area = peak.peak_area[color]
