@@ -49,8 +49,8 @@ def preprocessing_calibration(image: np.ndarray) -> list[np.ndarray]:
 
 def draw_contour(image: np.ndarray, list_contour: list) -> np.ndarray:
     index = -1
-    color = (0, 255, 0)
-    thickness = 8
+    color = (0, 0, 255)
+    thickness = 6
     line_type = cv2.LINE_AA
     new_image = image.copy()
     cv2.drawContours(new_image, list_contour, index, color, thickness, line_type)
@@ -58,13 +58,15 @@ def draw_contour(image: np.ndarray, list_contour: list) -> np.ndarray:
 
 def draw_bounding_box(image: np.ndarray, list_box: list) -> np.ndarray:
     new_image = image.copy()
-    for box in list_box:
+    for i, box in enumerate(list_box):
         x, y, w, h = box
         top_left_point = (x, y)
         bottom_right_point = (x+w, y+h)
         color = (0, 0, 255)
-        thickness = 8
+        thickness = 6
         new_image = cv2.rectangle(new_image, top_left_point, bottom_right_point, color, thickness)
+        
+        new_image = cv2.putText(new_image, f"Peak {i+1}", (10, y+h-10), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 0), 6)
     return new_image
 
 def __to_grayscale(image_rgb: np.ndarray) -> np.ndarray:
