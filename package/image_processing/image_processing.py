@@ -43,9 +43,9 @@ def preprocessing_calibration(image: np.ndarray) -> list[np.ndarray]:
     list_contour = __get_contour(threshold_mask, min_area=400)
     list_box_horizontal = __get_bounding_box_horizontal(list_contour, image_original.shape[1])
     list_cropped_by_box_horizontal = __crop_by_bounding_box(image_remove_background, list_box_horizontal)
-    image_with_contour_and_bounding_box = draw_contour(image_original, list_contour)
-    image_with_contour_and_bounding_box = draw_bounding_box(image_with_contour_and_bounding_box, list_box_horizontal)
-    return list_cropped_by_box_horizontal, image_with_contour_and_bounding_box
+    image_with_contour = draw_contour(image_original, list_contour)
+    image_with_bounding_box = draw_bounding_box(image_with_contour, list_box_horizontal)
+    return list_cropped_by_box_horizontal, image_with_bounding_box
 
 def draw_contour(image: np.ndarray, list_contour: list) -> np.ndarray:
     index = -1
