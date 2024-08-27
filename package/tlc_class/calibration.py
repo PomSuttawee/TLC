@@ -18,10 +18,6 @@ class Calibration:
     def __init__(self, image, concentration):
         """
         Initialize the Calibration object.
-
-        Parameters:
-        - image: The input image for calibration.
-        - concentration: List of concentrations corresponding to the peaks.
         """
         self.image = image
         self.concentration = concentration
@@ -35,27 +31,6 @@ class Calibration:
         self._calculate_fit_line()
         self._plot_intensity()
         self._plot_best_fit_line()
-        
-        # print('\n\n### Intensity')
-        # for i, peak in enumerate(self.peaks):
-        #     print(f'\tPeak {i+1}: {peak.intensity}')
-        
-        # print('\n### Minima')
-        # for i, peak in enumerate(self.peaks):
-        #     print(f'\tPeak {i+1}: {peak.minima}')
-        # # refined_best_minima = self._refine_minima(best_minima)
-        
-        # print('\n### Peak Area')
-        # for i, peak in enumerate(self.peaks):
-        #     print(f'\tPeak {i+1}:')
-        #     for color in 'RGB':
-        #         print(f'\t\t{color}: {peak.peak_area[color]}')
-
-        # print('\n### Best Fit Line')
-        # for i, peak in enumerate(self.peaks):
-        #     print(f'\tPeak {i+1}:')
-        #     for color in 'RGB':
-        #         print(f'\t\t{color}: {peak.best_fit_line[color]}')
         
     def _calculate_intensity(self):
         """
@@ -87,12 +62,6 @@ class Calibration:
     def _refine_minima(self, minima):
         """
         Refine the minima points to determine accurate peak boundaries.
-
-        Parameters:
-        - minima: Initial minima points.
-
-        Returns:
-        - new_minima: Refined minima points.
         """
         new_minima = [(minima[i] + minima[i + 1]) // 2 for i in range(1, len(minima) - 1, 2)]
         new_minima.insert(0, 0)
