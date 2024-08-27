@@ -25,8 +25,8 @@ class Calibration:
         """
         self.image = image
         self.concentration = concentration
-        processed_image = image_processing.preprocessing_calibration(image, remove_background=True)
-        self.peaks = [PeakInfo(image) for image in processed_image]
+        processed_image_by_peak, self.processed_image_result = image_processing.preprocessing_calibration(image)
+        self.peaks = [PeakInfo(image) for image in processed_image_by_peak]
         self.plot = {}
         
         self._calculate_intensity()
@@ -141,7 +141,7 @@ class Calibration:
     def _plot_intensity(self):
         x = np.arange(0, len(self.peaks[0].intensity['R']))
         for j, peak in enumerate(self.peaks):
-            figure, axis = plt.subplots(nrows=3, ncols=1, figsize=(5, 12))
+            figure, axis = plt.subplots(nrows=3, ncols=1, figsize=(4, 12))
             rgb = ['Red', 'Green', 'Blue']
             for i, color in enumerate(['R', 'G', 'B']):
                 intensity = peak.intensity[color]
