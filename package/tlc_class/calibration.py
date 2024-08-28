@@ -15,23 +15,27 @@ class PeakInfo:
         self.plot_best_fit_line = None
     
 class Calibration:
-    def __init__(self, image: np.ndarray, concentration: list[float]):
+    def __init__(self, name: str, image: np.ndarray, concentration: list[float]):
         """
         Initialize the Calibration object.
         """
+        self.name = name
         self.image = image
         self.concentration = concentration
         processed_image_by_peak, self.processed_image_result = image_processing.preprocessing_calibration(image)
         self.peaks = [PeakInfo(image) for image in processed_image_by_peak]
         
-        self._calculate_intensity()
-        self._calculate_minima()
-        self._calculate_peak_area()
-        self._calculate_fit_line()
-        self._plot_intensity()
-        self._plot_best_fit_line()
-        
-    def _calculate_intensity(self):
+        self.__calculate_intensity()
+        self.__calculate_minima()
+        self.__calculate_peak_area()
+        self.__calculate_fit_line()
+        self.__plot_intensity()
+        self.__plot_best_fit_line()
+    
+    def set_name(self, name):
+        self.name = name
+    
+    def __calculate_intensity(self):
         """
         Calculate the intensity for each color channel in the preprocessed images.
         """
@@ -45,7 +49,7 @@ class Calibration:
                 intensity[color] = average_intensity
             peak.intensity = intensity
 
-    def _calculate_minima(self):
+    def __calculate_minima(self):
         """
         Calculate the minima points for intensity curves to determine peak boundaries.
         """
@@ -58,7 +62,7 @@ class Calibration:
             minima_index = np.sort(np.concatenate((zero_to_non_zero, non_zero_to_zero)))
             self.peaks[i].minima = minima_index
 
-    def _refine_minima(self, minima):
+    def __refine_minima(self, minima):
         """
         Refine the minima points to determine accurate peak boundaries.
         """
@@ -67,7 +71,7 @@ class Calibration:
         new_minima.append(self.image.shape[1] - 1)
         return new_minima
 
-    def _calculate_peak_area(self):
+    def __calculate_peak_area(self):
         """
         Calculate the area under the intensity curve for each peak and color channel.
         """
@@ -81,7 +85,7 @@ class Calibration:
                 peak_area[color] = np.array(each_color_area)
             peak.peak_area = peak_area
     
-    def _calculate_fit_line(self):
+    def __calculate_fit_line(self):
         """
         Calculate the best fit line for the peak areas vs. concentrations.
         """
@@ -106,7 +110,7 @@ class Calibration:
             peak.best_fit_line = best_fit_line
             peak.r2 = r2
 
-    def _plot_intensity(self):
+    def __plot_intensity(self):
         x = np.arange(0, len(self.peaks[0].intensity['R']))
         for j, peak in enumerate(self.peaks):
             figure, axis = plt.subplots(nrows=3, ncols=1, figsize=(4, 12))
@@ -124,8 +128,7 @@ class Calibration:
             peak.plot_intensity = figure
             plt.close()
 
-    
-    def _plot_best_fit_line(self):
+    def __plot_best_fit_line(self):
         max_peak_area_count = max([len(peak.peak_area['R']) for peak in self.peaks])
         for j, peak in enumerate(self.peaks):
             figure, axis = plt.subplots(nrows=3, ncols=1, figsize=(3, 9))
@@ -143,6 +146,7 @@ class Calibration:
                 axis[i].set_title(f'Peak {j+1}: {rgb[i]} Peak Area')
                 axis[i].set_xlabel('Concentration')
                 axis[i].set_ylabel('Peak Area')
+                axis[i].grid()
                 axis[i].legend()
             figure.tight_layout()
             peak.plot_best_fit_line = figure
