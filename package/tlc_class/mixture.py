@@ -2,30 +2,37 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from package.image_processing import image_processing
+from scipy.signal import find_peaks
 
 class Mixture:
     """
     Initialize the Mixture object.
     """
-    def __init__(self, image: np.ndarray):
+    def __init__(self, name: str, image: np.ndarray):
+        self.name = name
         self.image = image
-        self.processed_image = self._preprocess_image(image)
+        self.processed_image = None
         self.intensity = {}
         self.peak_area = {}
+        self.plot_intensity = None
         
-        self._calculate_intensity()
-        minima = self._calculate_minima()
-        new_minima = self._refine_minima(minima)
-        self._calculate_peak_area(new_minima)
+        self.__preprocess_image()
+        self.__calculate_intensity()
+        self.minima_refined = self.__calculate_minima()
+        # self.minima_refined = self.__refine_minima(minima)
+        self.__calculate_peak_area(self.minima_refined)
+        self.__plot_intensity()
 
-    def _preprocess_image(self, image):
+    def set_name(self, name):
+        self.name = name
+    
+    def __preprocess_image(self):
         """
         Preprocess the image for analysis.
         """
-        preprocessed_image = image_processing.preprocessing_mixture(image)
-        return preprocessed_image
+        self.processed_image = image_processing.preprocessing_mixture(self.image)
 
-    def _calculate_intensity(self):
+    def __calculate_intensity(self):
         """
         Calculate the intensity for each color channel in the preprocessed images.
         """
@@ -38,18 +45,15 @@ class Mixture:
             intensity[color] = average_intensity
         self.intensity = intensity
 
-    def _calculate_minima(self):
+    def __calculate_minima(self):
         """
         Calculate the minima points for intensity curves to determine peak boundaries.
         """
-        intensity_grayscale = 0.299*self.intensity['R'] + 0.587*self.intensity['G'] + 0.114*self.intensity['B']
-        threshold_intensity = np.where(intensity_grayscale > 0, 1, 0)
-        zero_to_non_zero = np.where((threshold_intensity[:-1] == 0) & (threshold_intensity[1:] != 0))[0]
-        non_zero_to_zero = np.where((threshold_intensity[:-1] != 0) & (threshold_intensity[1:] == 0))[0] + 1
-        minima_index = np.sort(np.concatenate((zero_to_non_zero, non_zero_to_zero)))
+        intensity_grayscale = 255 - (0.299*self.intensity['R'] + 0.587*self.intensity['G'] + 0.114*self.intensity['B'])
+        minima_index, _ = find_peaks(intensity_grayscale, prominence=2)
         return minima_index
 
-    def _refine_minima(self, minima):
+    def __refine_minima(self, minima):
         """
         Refine the minima points to determine accurate peak boundaries.
         """
@@ -58,7 +62,7 @@ class Mixture:
         new_minima.append(self.image.shape[1] - 1)
         return new_minima
 
-    def _calculate_peak_area(self, minima):
+    def __calculate_peak_area(self, minima):
         """
         Calculate the area under the intensity curve for each peak and color channel.
         """
@@ -70,3 +74,20 @@ class Mixture:
                 each_color_area.append(np.trapz(intensity[minima[index_minima]: minima[index_minima + 1] + 1]))
             peak_area[color] = np.array(each_color_area)
         self.peak_area = peak_area
+    
+    def __plot_intensity(self):
+        x = np.arange(0, len(self.intensity['R']))
+        figure, axis = plt.subplots(nrows=3, ncols=1, figsize=(4, 12))
+        rgb = ['Red', 'Green', 'Blue']
+        for i, color in enumerate(['R', 'G', 'B']):
+            intensity = self.intensity[color]
+            axis[i].plot(x, intensity, color=rgb[i])
+            axis[i].scatter(self.minima_refined, np.take(intensity, self.minima_refined))
+            axis[i].set_title(f'{rgb[i]} Intensity')
+            axis[i].set_xlabel('Pixel')
+            axis[i].set_ylabel('Intensity')
+            # axis[i].set_ylim((0, 255))
+            axis[i].grid()
+        figure.tight_layout()
+        self.plot_intensity = figure
+        plt.close()
