@@ -1,108 +1,115 @@
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QWidget, QListWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog, QTreeWidget, QTreeWidgetItem, QAbstractItemView
+from PySide6.QtWidgets import QWidget, QListWidget, QListWidgetItem, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+from matplotlib.figure import Figure
+
+from package.image_processing.image_processing import read_image
+from package.tlc_class.calibration import Calibration
+from package.tlc_class.mixture import Mixture
 
 from PIL.ImageQt import ImageQt
 from PIL import Image
+import numpy
 import cv2
-
-from package.mixhack.image_processing import read_image
-from package.mixhack.mixture import Mixture
-from package.mixhack import mixture_hack
+import matplotlib
+matplotlib.use('Qt5Agg')
 
 class WidgetMixture(QWidget):
     def __init__(self):
         super().__init__()
-        self.list_image_path = []
-        self.list_calibration_object = []
-
-        # Top Horizontal Layout
-        h_layout_1 = QHBoxLayout()
-        ## Button Layout
-        v_layout_1 = QVBoxLayout()
+        self.dict_input_path = {}
+        self.dict_mixture_object = {}
+        
+        main_layout = QHBoxLayout()
+        
+        # Left Vertical Box
+        v_layout_left = QVBoxLayout()
+        ## Button
         h_layout_button = QHBoxLayout()
         button_upload = QPushButton("Upload")
         button_upload.clicked.connect(self.upload_image)
         button_delete = QPushButton("Delete")
         button_delete.clicked.connect(self.delete_image)
-        button_process = QPushButton("Process")
-        button_process.clicked.connect(self.process_image)
+        button_calibrate = QPushButton("Process")
+        button_calibrate.clicked.connect(self.process_image)
         h_layout_button.addWidget(button_upload)
         h_layout_button.addWidget(button_delete)
-        h_layout_button.addWidget(button_process)
-        ## Image Path List Widget
-        self.list_widget_image_path = QListWidget()
-        self.list_widget_image_path.currentItemChanged.connect(self.show_image)
-        v_layout_1.addLayout(h_layout_button)
-        v_layout_1.addWidget(self.list_widget_image_path)
-        ## Image Label
-        self.label_image = QLabel()
-        self.label_image.setAlignment(Qt.AlignCenter)
+        h_layout_button.addWidget(button_calibrate)
+        ## Input Path
+        self.list_widget_input_path = QListWidget()
+        ## Mixture Data
+        self.list_widget_mixture_data = QListWidget()
+        self.list_widget_mixture_data.currentItemChanged.connect(self.show_mixture_data)
         
-        h_layout_1.addLayout(v_layout_1, 1)
-        h_layout_1.addWidget(self.label_image, 3)
-
-        # Bottom Horizontal Layout
-        h_layout_2 = QHBoxLayout()
-        self.tree_widget = QTreeWidget()
-        self.tree_widget.setColumnCount(1)
-        self.tree_widget.setHeaderLabel("Name")
-        self.tree_widget.setSelectionMode(QAbstractItemView.MultiSelection)
+        v_layout_left.addLayout(h_layout_button)
+        v_layout_left.addWidget(self.list_widget_input_path, 1)
+        v_layout_left.addWidget(self.list_widget_mixture_data, 4)
         
-        self.label_image_mixture = QLabel()
-        # self.label_result = QLabel()
-        h_layout_2.addWidget(self.tree_widget)
-        # h_layout_2.addWidget(self.label_image_mixture)
-        # h_layout_2.addWidget(self.label_result)
-
-        # Main Vertical Layout
-        main_v_layout = QVBoxLayout()
-        main_v_layout.addLayout(h_layout_1, 1)
-        main_v_layout.addLayout(h_layout_2, 2)
-        self.setLayout(main_v_layout)
-
+        # Middle Vertical Box
+        v_layout_middle = QVBoxLayout()
+        ## Original Image
+        self.label_image_original = QLabel()
+        self.label_image_original.setAlignment(Qt.AlignTop)
+        ## Processed Image
+        self.label_image_processed = QLabel()
+        self.label_image_processed.setAlignment(Qt.AlignTop)
+        ## Mixture Data Label
+        self.label_mixture_data = QLabel()
+        
+        v_layout_middle.addWidget(self.label_image_original, 1)
+        v_layout_middle.addWidget(self.label_image_processed, 1)
+        v_layout_middle.addWidget(self.label_mixture_data, 1)
+        
+        # Right Vertical Box
+        self.v_layout_right = QVBoxLayout()
+        
+        main_layout.addLayout(v_layout_left, 1)
+        main_layout.addLayout(v_layout_middle, 2)
+        main_layout.addLayout(self.v_layout_right, 2)
+        self.setLayout(main_layout)
+        
     def upload_image(self):
-        file_name = QFileDialog.getOpenFileName(self, "Open file", "C:\\Users\\User\\Desktop\\TLC\\Project\\Input", "Image files (*.png *.jpg *.gif *.svg)")
-        self.list_image_path.append(file_name[0])
-        self.list_widget_image_path.addItem(file_name[0])
+        file_path, _ = QFileDialog.getOpenFileName(self, "Open file", "C:\\Users\\Suttawee\\Desktop\\Mixture-Hack-main\\Project\\Input", "Image files (*.png *.jpg *.gif *.svg)")
+        image_name = file_path.split('/')[-1]
+        self.dict_input_path[image_name] = file_path
+        self.list_widget_input_path.addItem(image_name)
 
     def delete_image(self):
-        self.list_image_path.remove(self.list_widget_image_path.currentItem().text())
-        self.list_widget_image_path.takeItem(self.list_widget_image_path.currentRow())
-    
+        image_name = self.list_widget_input_path.currentItem().text()
+        self.dict_input_path.pop(image_name)
+        self.list_widget_input_path.takeItem(self.list_widget_input_path.currentRow())
+
     def process_image(self):
-        self.tree_widget.clear()
-        path = self.list_widget_image_path.currentItem().text()
-        image = read_image(path)
-        self.mixture_object = Mixture(image)
-        self.label_image_mixture.setPixmap(self._convert_cv2_to_qpixmap(self.mixture_object.processed_image))
+        self.list_widget_mixture_data.clear()
+        for name, path in self.dict_input_path.items():
+            image = read_image(path)
+            mixture_object = Mixture(name, image)
+            self.dict_mixture_object[name] = mixture_object
+            self.list_widget_mixture_data.addItem(name) 
+    
+    def show_mixture_data(self, item: QListWidgetItem):
+        name = item.text()
+        mixture_object = self.dict_mixture_object[name]
+        
+        pix = self.__convert_cv2_to_qpixmap(mixture_object.image)
+        self.label_image_original.setPixmap(pix)
+        
+        pix = self.__convert_cv2_to_qpixmap(mixture_object.processed_image)
+        self.label_image_processed.setPixmap(pix)
+        
+        data_mixture = f"Mixture: {name}\nPeak Count: {len(mixture_object.peak_area['R'])}\nPeak Area:\n\tR: {mixture_object.peak_area['R']}\n\tG: {mixture_object.peak_area['G']}\n\tB: {mixture_object.peak_area['B']}"
+        self.label_mixture_data.setText(data_mixture)
 
-        items = []
-        item = QTreeWidgetItem([f"Mixture"])
-        for peak in range(len(self.mixture_object.peak_area['R'])):
-            child = QTreeWidgetItem([f"Peak {peak+1}"])
-            item.addChild(child)
-        items.append(item)
-        self.tree_widget.addTopLevelItems(items)
-
-        for i, calibration_object in enumerate(self.list_calibration_object):
-            item = QTreeWidgetItem([f"Calibration {i+1}"])
-            for j, peak in enumerate(calibration_object.peaks):
-                    child = QTreeWidgetItem([f"Peak {j+1}"])
-                    item.addChild(child)
-            items.append(item)
-            self.tree_widget.addTopLevelItems(items)
+        plot = mixture_object.plot_intensity
+        if self.v_layout_right.count() != 0:
+            canvas = self.v_layout_right.takeAt(0)
+            canvas.widget().deleteLater()
+        canvas_intensity = FigureCanvasQTAgg(plot)
+        self.v_layout_right.addWidget(canvas_intensity)
     
-    def show_image(self, item):
-        pix = QPixmap(item.text())
-        pix = pix.scaledToHeight(250)
-        self.label_image.setPixmap(pix)
-    
-    def on_signal_from_calibration(self, list_calibration_object):
-        self.list_calibration_object = list_calibration_object
-    
-    def _convert_cv2_to_qpixmap(self, cv_image):
+    def __convert_cv2_to_qpixmap(self, cv_image: numpy.ndarray):
         rgb_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
         PIL_image = Image.fromarray(rgb_image).convert('RGB')
         pix = QPixmap.fromImage(ImageQt(PIL_image))
-        return pix.scaledToWidth(600)
+        return pix.scaledToWidth(500)
