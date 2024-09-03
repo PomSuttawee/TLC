@@ -45,7 +45,9 @@ class Calibration:
             for j, color in enumerate(['R', 'G', 'B']):
                 total_intensity = np.sum(image_rgb[j], axis=0)
                 count_color_pixel = np.sum(np.where(image_rgb[j] > 0, 1, 0), axis=0)
-                average_intensity = np.where(count_color_pixel > 0, (255 - (total_intensity / count_color_pixel)).astype(int), 0)
+                safe_count_color_pixel = np.where(count_color_pixel == 0, 1, count_color_pixel)
+                average_intensity = (255 - (total_intensity / safe_count_color_pixel)).astype(int)
+                average_intensity[count_color_pixel == 0] = 0
                 intensity[color] = average_intensity
             peak.intensity = intensity
 
@@ -93,20 +95,18 @@ class Calibration:
             best_fit_line = {}
             r2 = {}
             for color in 'RGB':
-                # Calculate fite line
+                # Best fite line
                 concentration = self.concentration[-len(peak.peak_area[color]):]
                 best_fit_line[color] = tuple(np.polyfit(concentration, peak.peak_area[color], 1).astype(int))
                 
-                # Calculate R2
+                # R2
                 actual = np.array(peak.peak_area[color])
                 coef, const = best_fit_line[color]
                 predict = np.array([coef*cont + const for cont in concentration])
                 mean = np.mean(actual)
-                
                 ssr = sum(np.power(actual-predict, 2))
                 sst = sum(np.power(actual-mean, 2))
-                r2[color] = 1 - ssr/sst
-                
+                r2[color] = round(1 - ssr/sst, 3)
             peak.best_fit_line = best_fit_line
             peak.r2 = r2
 
