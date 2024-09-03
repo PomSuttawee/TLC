@@ -11,8 +11,6 @@ def read_image(image_path: str) -> np.ndarray:
 def resize_image(image: np.ndarray, scale: float) -> np.ndarray:
     if scale <= 0:
         raise ValueError("Scale must be a positive number")
-    if not isinstance(image, np.ndarray):
-        raise TypeError("Image must be a numpy.ndarray")
     return cv2.resize(image, (0, 0), fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
 
 def select_area_from_image(image: np.ndarray) -> np.ndarray:
