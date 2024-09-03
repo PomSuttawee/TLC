@@ -18,12 +18,12 @@ class Mixture:
         
         self.__preprocess_image()
         self.__calculate_intensity()
-        self.minima_refined = self.__calculate_minima()
-        # self.minima_refined = self.__refine_minima(minima)
+        minima = self.__calculate_minima()
+        self.minima_refined = self.__refine_minima(minima)
         self.__calculate_peak_area(self.minima_refined)
         self.__plot_intensity()
 
-    def set_name(self, name):
+    def set_name(self, name: str):
         self.name = name
     
     def __preprocess_image(self):
@@ -41,7 +41,9 @@ class Mixture:
         for i, color in enumerate(['R', 'G', 'B']):
             total_intensity = np.sum(image_rgb[i], axis=0)
             count_color_pixel = np.sum(np.where(image_rgb[i] > 0, 1, 0), axis=0)
-            average_intensity = np.where(count_color_pixel > 0, (255 - (total_intensity / count_color_pixel)).astype(int), 0)
+            safe_count_color_pixel = np.where(count_color_pixel == 0, 1, count_color_pixel)
+            average_intensity = (255 - (total_intensity / safe_count_color_pixel)).astype(int)
+            average_intensity[count_color_pixel == 0] = 0
             intensity[color] = average_intensity
         self.intensity = intensity
 
@@ -53,11 +55,12 @@ class Mixture:
         minima_index, _ = find_peaks(intensity_grayscale, prominence=2)
         return minima_index
 
-    def __refine_minima(self, minima):
+    def __refine_minima(self, minima: list):
         """
         Refine the minima points to determine accurate peak boundaries.
         """
-        new_minima = [(minima[i] + minima[i + 1]) // 2 for i in range(1, len(minima) - 1, 2)]
+        # new_minima = [(minima[i] + minima[i + 1]) // 2 for i in range(1, len(minima) - 1, 2)]
+        new_minima = list(minima.copy())
         new_minima.insert(0, 0)
         new_minima.append(self.image.shape[1] - 1)
         return new_minima
