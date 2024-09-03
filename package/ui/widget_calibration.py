@@ -2,30 +2,39 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QWidget, QListWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog, QLineEdit, QTreeWidget, QTreeWidgetItem
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
-from matplotlib.figure import Figure
 
 from package.image_processing.image_processing import read_image
 from package.tlc_class.calibration import Calibration
 
 from PIL.ImageQt import ImageQt
-from PIL import Image 
+from PIL import Image
+import numpy as np
 import cv2
 import matplotlib
 matplotlib.use('Qt5Agg')
 
 class WidgetCalibration(QWidget):
-    data_sent = Signal(list)
+    data_sent = Signal(dict)
 
     def __init__(self):
         super().__init__()
         self.dict_input_path = {}
         self.dict_calibration_object = {}
-
-        main_layout = QHBoxLayout()
+        self.init_main_layout()
         
-        # Left Vertical Box
-        v_layout_left = QVBoxLayout()
-        ## Button
+    def init_main_layout(self):
+        self.main_layout = QHBoxLayout()
+        self.init_left_layout()
+        self.init_middle_layout()
+        self.v_layout_right = QVBoxLayout()
+        self.main_layout.addLayout(self.v_layout_left, 1)
+        self.main_layout.addLayout(self.v_layout_middle, 2)
+        self.main_layout.addLayout(self.v_layout_right, 2)
+        self.setLayout(self.main_layout)
+
+    def init_left_layout(self):
+        self.v_layout_left = QVBoxLayout()
+        # Button
         h_layout_button = QHBoxLayout()
         button_upload = QPushButton("Upload")
         button_upload.clicked.connect(self.upload_image)
@@ -36,61 +45,47 @@ class WidgetCalibration(QWidget):
         h_layout_button.addWidget(button_upload)
         h_layout_button.addWidget(button_delete)
         h_layout_button.addWidget(button_calibrate)
-        ## Concentration Input
+        # Concentration Input
         h_layout_concentration = QHBoxLayout()
         label_concentration = QLabel("Concentration: ")
         self.line_edit_concentration = QLineEdit()
-        self.line_edit_concentration.setText("1 2 3 4 5 6 7 8")
+        self.line_edit_concentration.setText("5 8.33 16.67 33.33 50 66.67 83.33 100")
         h_layout_concentration.addWidget(label_concentration)
         h_layout_concentration.addWidget(self.line_edit_concentration)
-        ## Input Path
+        # Input Path
         self.list_widget_input_path = QListWidget()
-        ## Calibration Data
+        # Calibration Data
         self.tree_widget_calibration_data = QTreeWidget()
         self.tree_widget_calibration_data.setColumnCount(1)
         self.tree_widget_calibration_data.setHeaderLabel("Calibration Data")
         self.tree_widget_calibration_data.itemClicked.connect(self.show_calibration_data)
+        self.v_layout_left.addLayout(h_layout_button)
+        self.v_layout_left.addLayout(h_layout_concentration)
+        self.v_layout_left.addWidget(self.list_widget_input_path, 1)
+        self.v_layout_left.addWidget(self.tree_widget_calibration_data, 4)
         
-        v_layout_left.addLayout(h_layout_button)
-        v_layout_left.addLayout(h_layout_concentration)
-        v_layout_left.addWidget(self.list_widget_input_path, 1)
-        v_layout_left.addWidget(self.tree_widget_calibration_data, 4)
-        
-        # Middle Vertical Box
-        v_layout_middle = QVBoxLayout()
-        ## Original Image
+    def init_middle_layout(self):
+        self.v_layout_middle = QVBoxLayout()
+        # Original Image
         self.label_image_original = QLabel()
         self.label_image_original.setAlignment(Qt.AlignTop)
-        ## Processed Image
+        # Processed Image
         self.label_image_processed = QLabel()
         self.label_image_processed .setAlignment(Qt.AlignTop)
-        ## Peak Image
+        # Peak Image
         self.label_image_peak = QLabel()
         self.label_image_peak.setAlignment(Qt.AlignTop)
-        ## Peak Data Label
+        # Peak Data Label
         self.label_peak_data = QLabel()
-        
-        v_layout_middle.addWidget(self.label_image_original, 1)
-        v_layout_middle.addWidget(self.label_image_processed, 1)
-        v_layout_middle.addWidget(self.label_image_peak, 1)
-        v_layout_middle.addWidget(self.label_peak_data, 1)
-        
-        # Right Vertical Box
-        self.v_layout_right = QVBoxLayout()
-        
-        main_layout.addLayout(v_layout_left, 1)
-        main_layout.addLayout(v_layout_middle, 2)
-        main_layout.addLayout(self.v_layout_right, 2)
-        self.setLayout(main_layout)
-
+        self.v_layout_middle.addWidget(self.label_image_original, 1)
+        self.v_layout_middle.addWidget(self.label_image_processed, 1)
+        self.v_layout_middle.addWidget(self.label_image_peak, 1)
+        self.v_layout_middle.addWidget(self.label_peak_data, 1)
+    
     def upload_image(self):
-        files, _ = QFileDialog.getOpenFileNames(self, "Open file", "C:\\Users\\Suttawee\\Desktop\\Mixture-Hack-main\\Project\\Input", "Image files (*.png *.jpg *.gif *.svg)")
-        
+        files, _ = QFileDialog.getOpenFileNames(self, "Open file", "C:\\Users\\Suttawee\\Desktop\\TLC\\Input", "Image files (*.png *.jpg *.gif *.svg)")
         for path in files:
-            print(f'Path: {path}')
             image_name = path.split('/')[-1]
-            print(f'Image Name: {image_name}')
-            
             self.dict_input_path[image_name] = path
             self.list_widget_input_path.addItem(image_name)
             self.dict_calibration_object[image_name] = None
@@ -119,7 +114,6 @@ class WidgetCalibration(QWidget):
             self.tree_widget_calibration_data.addTopLevelItems(items)
 
         # Send Signal
-        list_calibration_object = [value for value in self.dict_calibration_object.values()]
         self.data_sent.emit(self.dict_calibration_object)
         
     def show_calibration_data(self, item, column):
@@ -148,7 +142,7 @@ class WidgetCalibration(QWidget):
         canvas_best_fit_line = FigureCanvasQTAgg(plot)
         self.v_layout_right.addWidget(canvas_best_fit_line)
 
-    def __convert_cv2_to_qpixmap(self, cv_image):
+    def __convert_cv2_to_qpixmap(self, cv_image: np.ndarray):
         rgb_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
         PIL_image = Image.fromarray(rgb_image).convert('RGB')
         pix = QPixmap.fromImage(ImageQt(PIL_image))
