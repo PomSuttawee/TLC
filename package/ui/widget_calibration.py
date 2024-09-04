@@ -135,7 +135,7 @@ class WidgetCalibration(QWidget):
         data_calibration = f"Calibration: {name}\nPeak: {peak_index+1}\nPeak Area:\n\tR: {data_peak_area['R']}\n\tG: {data_peak_area['G']}\n\tB: {data_peak_area['B']}\nBest Fit Line:\n\tR: {data_best_fit_line['R']}\n\tG: {data_best_fit_line['G']}\n\tB: {data_best_fit_line['B']}"
         self.label_peak_data.setText(data_calibration)
         
-        plot = calibration_object.peaks[peak_index].plot_best_fit_line
+        plot = calibration_object.peaks[peak_index].plot_fit_line
         if self.v_layout_right.count() != 0:
             canvas = self.v_layout_right.takeAt(0)
             canvas.widget().deleteLater()
