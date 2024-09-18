@@ -1,6 +1,7 @@
 from package.image_processing.util import *
 import numpy as np
 import cv2
+from package.image_processing import parameter
 
 def read_image(image_path: str) -> np.ndarray:
     image = cv2.imread(image_path)
@@ -32,17 +33,27 @@ def preprocessing_mixture(image: np.ndarray) -> np.ndarray:
 
 def preprocessing_calibration(image: np.ndarray) -> list[np.ndarray]:
     image_original = image.copy()
-    image = __to_grayscale(image)
-    image = __apply_gaussian_blur(image)
-    image = __apply_clahe(image)
-    image = __apply_adaptive_thresholding(image)
-    threshold_mask = __apply_morph(image)
-    image_remove_background = __apply_mask(image_original, threshold_mask, 'and')
-    list_contour = __get_contour(threshold_mask, min_area=500)
+    image_gray = __to_grayscale(image_original)
+    image_blur = __apply_gaussian_blur(image_gray)
+    image_clahe = __apply_clahe(image_blur)
+    mask = __apply_adaptive_thresholding(image_clahe)
+    mask_morph = __apply_morph(mask)
+    image_remove_background = __apply_mask(image_original, mask_morph, operator='and')
+    list_contour = __get_contour(mask_morph, min_area=500)
     list_box_horizontal = __get_bounding_box_horizontal(list_contour, image_original.shape[1])
     list_cropped_by_box_horizontal = __crop_by_bounding_box(image_remove_background, list_box_horizontal)
     image_with_contour = draw_contour(image_original, list_contour)
     image_with_bounding_box = draw_bounding_box(image_with_contour, list_box_horizontal)
+    
+    # cv2.imwrite('grayscale.jpg', image_gray)
+    # cv2.imwrite('blur.jpg', image_blur)
+    # cv2.imwrite('clahe.jpg', image_clahe)
+    # cv2.imwrite('mask.jpg', mask)
+    # cv2.imwrite('mask_morph.jpg', mask_morph)
+    # cv2.imwrite('remove_background.jpg', image_remove_background)
+    cv2.imwrite('contour.jpg', image_with_contour)
+    cv2.imwrite('bounding_box.jpg', image_with_bounding_box)
+    
     return list_cropped_by_box_horizontal, image_with_bounding_box
 
 def draw_contour(image: np.ndarray, list_contour: list) -> np.ndarray:
@@ -71,13 +82,12 @@ def __to_grayscale(image_rgb: np.ndarray) -> np.ndarray:
     return cv2.cvtColor(image_rgb, cv2.COLOR_BGR2GRAY)
 
 def __apply_gaussian_blur(image: np.ndarray) -> np.ndarray:
-    kernel_size = (5, 5)
-    sigma_x = 0.3
-    return cv2.GaussianBlur(image, kernel_size, sigma_x)
+    kernel_size = parameter.GAUSSIAN_BLUR_KERNEL_SIZE
+    return cv2.GaussianBlur(image, kernel_size, 3)
 
 def __apply_clahe(image: np.ndarray) -> np.ndarray:
-    clip_limit = 2.0
-    tile_grid_size = (5, 5)
+    clip_limit = parameter.CLAHE_CLIP_LIMIT
+    tile_grid_size = parameter.CLAHE_GRID_SIZE
     clahe_object = cv2.createCLAHE(clip_limit, tile_grid_size)
     return clahe_object.apply(image)
 
@@ -87,25 +97,25 @@ def __apply_adaptive_thresholding(image: np.ndarray, mode='Calibration') -> np.n
     threshold_type = cv2.THRESH_BINARY_INV
     block_cnt = 11 if mode == 'Calibration' else 1
     block_size = image.shape[0] // block_cnt  if (image.shape[0] // block_cnt) % 2 == 1 else image.shape[0] // block_cnt + 1
-    constant = 5
+    constant = parameter.ADAPTIVE_THRESHOLDING_CONSTANT
     return cv2.adaptiveThreshold(image, max_value, adaptive_method, threshold_type, block_size, constant)
 
 def __apply_morph(image: np.ndarray) -> np.ndarray:
-    return cv2.morphologyEx(image, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (25, 25)))
+    return cv2.morphologyEx(image, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, parameter.MORPH_KERNEL_SIZE))
 
 def __apply_mask(image: np.ndarray, mask: np.ndarray, operator: str) -> np.ndarray:
-    new_mask = cv2.merge([mask, mask, mask])
+    mask_rgb = cv2.merge([mask, mask, mask])
     if operator == 'and':
-        return cv2.bitwise_and(image, new_mask)
+        return cv2.bitwise_and(image, mask_rgb)
     elif operator == 'or':
-        return cv2.bitwise_or(image, new_mask)
+        return cv2.bitwise_or(image, mask_rgb)
     return KeyError
 
 def __get_contour(image: np.ndarray, min_area: int) -> list:
     mode = cv2.RETR_EXTERNAL
     method = cv2.CHAIN_APPROX_NONE
     list_contour, _ = cv2.findContours(image, mode, method)
-    if min_area == -1:
+    if min_area < 0:
         return list_contour
     return __remove_contour(list_contour, min_area)
 
