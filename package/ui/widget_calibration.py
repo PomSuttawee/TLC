@@ -124,7 +124,7 @@ class WidgetCalibration(QWidget):
         pix = self.__convert_cv2_to_qpixmap(calibration_object.image)
         self.label_image_original.setPixmap(pix)
 
-        pix = self.__convert_cv2_to_qpixmap(calibration_object.processed_image_result)
+        pix = self.__convert_cv2_to_qpixmap(calibration_object.processed_image_full)
         self.label_image_processed.setPixmap(pix)
 
         pix = self.__convert_cv2_to_qpixmap(calibration_object.peaks[peak_index].image)
