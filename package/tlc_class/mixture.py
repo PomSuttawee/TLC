@@ -5,21 +5,19 @@ from package.image_processing import image_processing
 from scipy.signal import find_peaks
 
 class Mixture:
-    """
-    Initialize the Mixture object.
-    """
     def __init__(self, name: str, image: np.ndarray):
         self.name = name
         self.image = image
         self.processed_image = None
         self.intensity = {}
+        self.minima = []
         self.peak_area = {}
         self.plot_intensity = None
         
         self.__preprocess_image()
         self.__calculate_intensity_rgb()
-        minima = self.__calculate_minima()
-        self.minima_refined = self.__refine_minima(minima)
+        self.__calculate_minima()
+        #self.minima = self.__refine_minima(minima)
         self.__calculate_peak_area_rgb()
         self.__plot_intensity()
 
@@ -44,9 +42,24 @@ class Mixture:
 
     def __calculate_minima(self):
         """ Calculate the minima points for intensity curves to determine peak boundaries. """
-        intensity_grayscale = 255 - (0.299*self.intensity['R'] + 0.587*self.intensity['G'] + 0.114*self.intensity['B'])
-        minima_index, _ = find_peaks(intensity_grayscale, prominence=2)
-        return minima_index
+        intensity_grayscale = 0.299*self.intensity['R'] + 0.587*self.intensity['G'] + 0.114*self.intensity['B']
+        intensity_grayscale_inverse = 255 - intensity_grayscale
+        minima_index, _ = find_peaks(intensity_grayscale_inverse, prominence=2)
+        
+        for i in range(len(intensity_grayscale)):
+            if intensity_grayscale[i] != 0 and (intensity_grayscale[i-1] == 0 or i == 0):
+                first_index = i
+                break
+            
+        for i in range(len(intensity_grayscale)-1, 0, -1):
+            if intensity_grayscale[i] == 0 and intensity_grayscale[i-1] != 0:
+                last_index = i
+                break
+        
+        new_minima = list(minima_index)
+        new_minima.insert(0, first_index)
+        new_minima.append(last_index)
+        self.minima = new_minima
 
     def __refine_minima(self, minima: list):
         """ Refine the minima points to determine accurate peak boundaries. """
@@ -61,22 +74,22 @@ class Mixture:
     
     def __calculate_peak_area_single_channel(self, intensity):
         peak_area = []
-        for index_minima in range(0, len(self.minima_refined)-1, 1):
-            peak_area.append(np.trapz(intensity[self.minima_refined[index_minima]: self.minima_refined[index_minima + 1] + 1]))
+        for index_minima in range(0, len(self.minima)-1, 1):
+            peak_area.append(np.trapz(intensity[self.minima[index_minima]: self.minima[index_minima + 1] + 1]))
         return np.array(peak_area)
     
     def __plot_intensity(self):
         x = np.arange(0, len(self.intensity['R']))
         figure, axis = plt.subplots(nrows=3, ncols=1, figsize=(4, 12))
         rgb = ['Red', 'Green', 'Blue']
-        for i, color in enumerate(['R', 'G', 'B']):
+        for i, color in enumerate('RGB'):
             intensity = self.intensity[color]
             axis[i].plot(x, intensity, color=rgb[i])
-            axis[i].scatter(self.minima_refined, np.take(intensity, self.minima_refined))
+            axis[i].scatter(self.minima, np.take(intensity, self.minima))
             axis[i].set_title(f'{rgb[i]} Intensity')
             axis[i].set_xlabel('Pixel')
             axis[i].set_ylabel('Intensity')
-            # axis[i].set_ylim((0, 255))
+            axis[i].set_ylim((0, 255))
             axis[i].grid()
         figure.tight_layout()
         self.plot_intensity = figure
