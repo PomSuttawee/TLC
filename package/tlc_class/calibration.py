@@ -43,7 +43,7 @@ class PeakInfo:
             each_color_area = []
             intensity = self.intensity[color]
             for index_minima in range(0, len(self.minima)-1, 2):
-                each_color_area.append(np.trapz(intensity[self.minima[index_minima]: self.minima[index_minima+1]+1]))
+                each_color_area.append(np.trapz(intensity[self.minima[index_minima]: self.minima[index_minima + 1] + 1]))
             peak_area[color] = np.array(each_color_area)
         self.peak_area = peak_area
     
@@ -114,12 +114,12 @@ class Calibration:
         self.concentration = concentration
         
         start = time.perf_counter()
-        processed_image_by_peak, self.processed_image_result = image_processing.preprocessing_calibration(image)
+        self.processed_image_peak, self.processed_image_full = image_processing.preprocessing_calibration(image)
         end = time.perf_counter()
         print(f'\nImage processing time: {round(end - start, 3)} sec')
         
         start = time.perf_counter()
-        self.peaks = [PeakInfo(image) for image in processed_image_by_peak]
+        self.peaks = [PeakInfo(image) for image in self.processed_image_peak]
         self.__process_peak()
         end = time.perf_counter()
         print(f'Peak processing time: {round(end - start, 3)} sec')
