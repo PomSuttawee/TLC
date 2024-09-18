@@ -1,6 +1,6 @@
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QWidget, QListWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog, QLineEdit, QTreeWidget, QTreeWidgetItem, QAbstractItemView
+from PySide6.QtWidgets import QWidget, QListWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QAbstractItemView, QDoubleSpinBox
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 
 from package.image_processing.image_processing import read_image
@@ -19,6 +19,7 @@ class WidgetMixtureHack(QWidget):
         super().__init__()
         self.dict_calibration_object = {}
         self.dict_mixture_object = {}
+        self.mixture_hack_object = None
         self.init_main_layout()
     
     def init_main_layout(self):
@@ -52,6 +53,10 @@ class WidgetMixtureHack(QWidget):
         
     def init_right_layout(self):
         self.v_layout_right = QVBoxLayout()
+        self.layout_canvas = QVBoxLayout()
+        self.layout_spinbox = QHBoxLayout()
+        self.v_layout_right.addLayout(self.layout_canvas, 5)
+        self.v_layout_right.addLayout(self.layout_spinbox, 1)
     
     def calculate_concentration(self):
         selected_mixture_name = self.list_widget_mixture_object.currentItem().text()
@@ -60,15 +65,29 @@ class WidgetMixtureHack(QWidget):
         selected_mixture_object = self.dict_mixture_object[selected_mixture_name]
         list_selected_calibration_object = [self.dict_calibration_object[name] for name in selected_calibration_name]
         
-        mh = MixtureHack(selected_mixture_object, list_selected_calibration_object)
+        self.mixture_hack_object = MixtureHack(selected_mixture_object, list_selected_calibration_object)
         log = ''
         for color in 'RGB':
             log += f'============ {color} Channel ============\n'
-            log += mh.solve_equation(color=color)
-
+            log += self.mixture_hack_object.solve_equation(color=color)
         self.label_hack_data.setText(log)
         
+        self.mixture_hack_object.plot_answer()
+        plot = self.mixture_hack_object.plot_mixture
+        if self.layout_canvas.count() != 0:
+            canvas = self.layout_canvas.takeAt(0)
+            canvas.widget().deleteLater()
+        canvas_mixture = FigureCanvasQTAgg(plot)
+        self.layout_canvas.addWidget(canvas_mixture)
         
+        self.list_spinbox = []
+        for calibration in self.dict_calibration_object.keys():
+            label_spinbox_name = QLabel(calibration)
+            spinbox = QDoubleSpinBox(self)
+            spinbox.setRange(0, 100)
+            spinbox.setValue(self.mixture_hack_object.solution['R'][calibration])
+            self.layout_spinbox.addWidget(label_spinbox_name)
+            self.layout_spinbox.addWidget(spinbox)
     
     # SIGNAL
     def on_signal_from_calibration(self, dict_calibration_object: dict[str, Calibration]):
