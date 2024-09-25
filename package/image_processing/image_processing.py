@@ -44,22 +44,12 @@ def preprocessing_calibration(image: np.ndarray) -> list[np.ndarray]:
     list_cropped_by_box_horizontal = __crop_by_bounding_box(image_remove_background, list_box_horizontal)
     image_with_contour = draw_contour(image_original, list_contour)
     image_with_bounding_box = draw_bounding_box(image_with_contour, list_box_horizontal)
-    
-    # cv2.imwrite('grayscale.jpg', image_gray)
-    # cv2.imwrite('blur.jpg', image_blur)
-    # cv2.imwrite('clahe.jpg', image_clahe)
-    # cv2.imwrite('mask.jpg', mask)
-    # cv2.imwrite('mask_morph.jpg', mask_morph)
-    # cv2.imwrite('remove_background.jpg', image_remove_background)
-    cv2.imwrite('contour.jpg', image_with_contour)
-    cv2.imwrite('bounding_box.jpg', image_with_bounding_box)
-    
     return list_cropped_by_box_horizontal, image_with_bounding_box
 
 def draw_contour(image: np.ndarray, list_contour: list) -> np.ndarray:
     index = -1
-    color = (0, 0, 255)
-    thickness = 6
+    color = (0, 255, 255)
+    thickness = 4
     line_type = cv2.LINE_AA
     new_image = image.copy()
     cv2.drawContours(new_image, list_contour, index, color, thickness, line_type)
@@ -71,8 +61,8 @@ def draw_bounding_box(image: np.ndarray, list_box: list) -> np.ndarray:
         x, y, w, h = box
         top_left_point = (x, y)
         bottom_right_point = (x+w, y+h)
-        color = (0, 0, 255)
-        thickness = 6
+        color = (255, 0, 255)
+        thickness = 4
         new_image = cv2.rectangle(new_image, top_left_point, bottom_right_point, color, thickness)
         
         new_image = cv2.putText(new_image, f"Peak {i+1}", (10, y+h-10), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 0), 6)
