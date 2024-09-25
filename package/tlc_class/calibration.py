@@ -5,8 +5,9 @@ from package.image_processing import image_processing
 import time
 
 class PeakInfo:
-    def __init__(self, image):
+    def __init__(self, image: np.ndarray, concentration: list[float]):
         self.image = image
+        self.concentration = concentration
         self.intensity = {}
         self.minima = []
         self.peak_area = {}
@@ -14,20 +15,29 @@ class PeakInfo:
         self.r2 = {}
         self.plot_intensity = None
         self.plot_fit_line = None
+        self.__process_peak()
+        
+    def __process_peak(self):
+        self.__calculate_intensity()
+        self.__calculate_minima()
+        self.__calculate_peak_area()
+        self.__calculate_fit_line(self.concentration)
+        self.__create_plot_intensity()
+        self.__create_plot_fit_line(self.concentration)
     
-    def calculate_intensity(self):
+    def __calculate_intensity(self):
         intensity = {}
         image_rgb = cv2.split(cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB))
         for j, color in enumerate(['R', 'G', 'B']):
-            total_intensity = np.sum(image_rgb[j], axis=0)
+            sum_intensity = np.sum(image_rgb[j], axis=0)
             count_color_pixel = np.sum(np.where(image_rgb[j] > 0, 1, 0), axis=0)
             safe_count_color_pixel = np.where(count_color_pixel == 0, 1, count_color_pixel)
-            average_intensity = (255 - (total_intensity / safe_count_color_pixel)).astype(int)
+            average_intensity = (255 - (sum_intensity / safe_count_color_pixel)).astype(int)
             average_intensity[count_color_pixel == 0] = 0
             intensity[color] = average_intensity
         self.intensity = intensity
     
-    def calculate_minima(self):
+    def __calculate_minima(self):
         """ Calculate the minima points for intensity curves to determine peak boundaries. """
         intensity_grayscale = 0.299*self.intensity['R'] + 0.587*self.intensity['G'] + 0.114*self.intensity['B']
         threshold_intensity = np.where(intensity_grayscale > 0, 1, 0)
@@ -36,7 +46,7 @@ class PeakInfo:
         minima_index = np.sort(np.concatenate((zero_to_non_zero, non_zero_to_zero)))
         self.minima = minima_index
     
-    def calculate_peak_area(self):
+    def __calculate_peak_area(self):
         """ Calculate the area under the intensity curve for each peak and color channel. """
         peak_area = {}
         for color in 'RGB':
@@ -47,7 +57,7 @@ class PeakInfo:
             peak_area[color] = np.array(each_color_area)
         self.peak_area = peak_area
     
-    def calculate_fit_line(self, concentration):
+    def __calculate_fit_line(self, concentration):
         """ Calculate the best fit line for the peak areas vs. concentrations. """
         best_fit_line = {}
         r2 = {}
@@ -67,7 +77,7 @@ class PeakInfo:
         self.best_fit_line = best_fit_line
         self.r2 = r2
     
-    def create_plot_intensity(self):
+    def __create_plot_intensity(self):
         x = np.arange(0, len(self.intensity['R']))
         figure, axis = plt.subplots(nrows=3, ncols=1, figsize=(4, 12))
         rgb = ['Red', 'Green', 'Blue']
@@ -84,7 +94,7 @@ class PeakInfo:
         self.plot_intensity = figure
         plt.close()
     
-    def create_plot_fit_line(self, concentration):
+    def __create_plot_fit_line(self, concentration):
         figure, axis = plt.subplots(nrows=3, ncols=1, figsize=(3, 9))
         rgb_color = {'R':'Red', 'G':'Green', 'B':'Blue'}
         for i, color in enumerate('RGB'):
@@ -112,63 +122,8 @@ class Calibration:
         self.name = name
         self.image = image
         self.concentration = concentration
-        
-        start = time.perf_counter()
         self.processed_image_peak, self.processed_image_full = image_processing.preprocessing_calibration(image)
-        end = time.perf_counter()
-        print(f'\nImage processing time: {round(end - start, 3)} sec')
-        
-        start = time.perf_counter()
-        self.peaks = [PeakInfo(image) for image in self.processed_image_peak]
-        self.__process_peak()
-        end = time.perf_counter()
-        print(f'Peak processing time: {round(end - start, 3)} sec')
+        self.peaks = [PeakInfo(image, self.concentration) for image in self.processed_image_peak]
     
     def set_name(self, name):
         self.name = name
-    
-    def __process_peak(self):
-        time_calculate_intensity = 0
-        time_calculate_minima = 0
-        time_calculate_peak_area = 0
-        time_calculate_fit_line = 0
-        time_create_plot_intensity = 0
-        time_create_plot_fit_line = 0
-        
-        for peak in self.peaks:
-            start = time.perf_counter()
-            peak.calculate_intensity()
-            end = time.perf_counter()
-            time_calculate_intensity += end - start
-            
-            start = time.perf_counter()
-            peak.calculate_minima()
-            end = time.perf_counter()
-            time_calculate_minima += end - start
-            
-            start = time.perf_counter()
-            peak.calculate_peak_area()
-            end = time.perf_counter()
-            time_calculate_peak_area += end - start
-            
-            start = time.perf_counter()
-            peak.calculate_fit_line(concentration=self.concentration)
-            end = time.perf_counter()
-            time_calculate_fit_line += end - start
-            
-            start = time.perf_counter()
-            peak.create_plot_intensity()
-            end = time.perf_counter()
-            time_create_plot_intensity += end - start
-            
-            start = time.perf_counter()
-            peak.create_plot_fit_line(self.concentration)
-            end = time.perf_counter()
-            time_create_plot_fit_line += end - start
-        
-        print(f'\tcalculate_intensity time: {round(time_calculate_intensity, 3)} sec')
-        print(f'\tcalculate_minima time: {round(time_calculate_minima, 3)} sec')
-        print(f'\tcalculate_peak_area time: {round(time_calculate_peak_area, 3)} sec')
-        print(f'\tcalculate_fit_line time: {round(time_calculate_fit_line, 3)} sec')
-        print(f'\tcreate_plot_intensity time: {round(time_create_plot_intensity, 3)} sec')
-        print(f'\tcreate_plot_fit_line time: {round(time_create_plot_fit_line, 3)} sec')
